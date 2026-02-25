@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>HybridIQ — SQL + RAG Intelligence</title>
+  <title>QueryBridge — SQL + RAG Intelligence</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet" />
@@ -213,7 +213,7 @@
 <div class="app">
 
   <header>
-    <div class="logo"><div class="logo-mark">⟳</div>HybridIQ</div>
+    <div class="logo"><div class="logo-mark">⟳</div>QueryBridge</div>
     <div class="header-pills">
       <span class="pill pill-sql">SQL</span>
       <span class="pill pill-rag">RAG</span>
@@ -262,7 +262,7 @@
     <div class="messages" id="messages">
       <div class="welcome" id="welcome">
         <div class="welcome-glyph">⟁</div>
-        <h1>SQL + RAG Hybrid Intelligence</h1>
+        <h1>QueryBridge</h1>
         <p>Ask any business question. The router decides whether to query the database, search documents, or synthesize both.</p>
         <div class="welcome-note">⚡ Running in demo mode — fully functional without a backend. Connect your API URL when ready.</div>
         <div class="welcome-chips" id="welcomeChips"></div>
@@ -712,7 +712,7 @@ function addMsg(m){
       <div class="route-stat" style="flex:2"><div class="route-stat-label">Router Reasoning</div><div class="route-stat-val" style="font-size:.72rem;color:var(--text2);white-space:normal;line-height:1.4">${esc(m.reason||"")}</div></div>
     </div>`;
     el.className=`msg route-${route}`;
-    el.innerHTML=`<div class="msg-avatar">AI</div><div class="msg-body"><div class="msg-meta"><span class="msg-name">HybridIQ</span><span class="msg-time">${now}</span><span class="msg-route-badge badge-${route}">${route}</span></div>${pipe}<div class="msg-content">${fmt(m.content)}${tableHtml}${sqlHtml}</div>${srcHtml}${card}</div>`;
+    el.innerHTML=`<div class="msg-avatar">QB</div><div class="msg-body"><div class="msg-meta"><span class="msg-name">QueryBridge</span><span class="msg-time">${now}</span><span class="msg-route-badge badge-${route}">${route}</span></div>${pipe}<div class="msg-content">${fmt(m.content)}${tableHtml}${sqlHtml}</div>${srcHtml}${card}</div>`;
   }
   cont.appendChild(el);cont.scrollTop=cont.scrollHeight;
 }
