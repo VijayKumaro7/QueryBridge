@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HybridIQ — SQL + RAG Intelligence</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg:           #0a0c10;
+      --bg2:          #0f1117;
+      --bg3:          #151820;
+      --border:       #1e2230;
+      --border2:      #262b3d;
+      --sql:          #00e5a0;
+      --sql-dim:      rgba(0,229,160,.12);
+      --sql-glow:     rgba(0,229,160,.25);
+      --rag:          #7b6cff;
+      --rag-dim:      rgba(123,108,255,.12);
+      --rag-glow:     rgba(123,108,255,.25);
+      --hybrid:       #ff9040;
+      --hybrid-dim:   rgba(255,144,64,.12);
+      --hybrid-glow:  rgba(255,144,64,.25);
+      --text:         #e8ecf5;
+      --text2:        #8b93ab;
+      --text3:        #505775;
+      --mono:         'DM Mono', monospace;
+      --sans:         'DM Sans', sans-serif;
+      --display:      'Syne', sans-serif;
+      --r: 10px; --r2: 16px;
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html{scroll-behavior:smooth}
+    body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:15px;line-height:1.6;min-height:100vh;overflow-x:hidden}
+    body::before{content:'';position:fixed;inset:0;z-index:0;
+      background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.035'/%3E%3C/svg%3E");
+      background-size:200px 200px;pointer-events:none}
+
+    .app{position:relative;z-index:1;display:grid;grid-template-columns:280px 1fr;grid-template-rows:auto 1fr;min-height:100vh}
+
+    /* Header */
+    header{grid-column:1/-1;border-bottom:1px solid var(--border);padding:0 28px;height:64px;display:flex;align-items:center;justify-content:space-between;background:rgba(10,12,16,.92);backdrop-filter:blur(12px);position:sticky;top:0;z-index:100}
+    .logo{display:flex;align-items:center;gap:10px;font-family:var(--display);font-size:1.15rem;font-weight:800;letter-spacing:-.02em;color:var(--text)}
+    .logo-mark{width:32px;height:32px;background:linear-gradient(135deg,var(--sql),var(--rag));border-radius:8px;display:grid;place-items:center;font-size:.9rem}
+    .header-pills{display:flex;gap:8px}
+    .pill{padding:4px 12px;border-radius:100px;font-size:.72rem;font-family:var(--mono);font-weight:500;letter-spacing:.04em;border:1px solid}
+    .pill-sql{color:var(--sql);border-color:var(--sql);background:var(--sql-dim)}
+    .pill-rag{color:var(--rag);border-color:var(--rag);background:var(--rag-dim)}
+    .pill-hybrid{color:var(--hybrid);border-color:var(--hybrid);background:var(--hybrid-dim)}
+    .header-right{display:flex;align-items:center;gap:14px}
+    .demo-badge{display:flex;align-items:center;gap:6px;padding:4px 12px;border-radius:100px;background:rgba(255,144,64,.12);border:1px solid rgba(255,144,64,.4);font-size:.68rem;font-family:var(--mono);color:var(--hybrid);letter-spacing:.04em}
+    .demo-dot{width:5px;height:5px;border-radius:50%;background:var(--hybrid);animation:pulse 1.5s ease infinite}
+    .header-status{display:flex;align-items:center;gap:8px;font-size:.78rem;color:var(--text2);font-family:var(--mono)}
+    .status-dot{width:7px;height:7px;border-radius:50%;background:var(--sql);box-shadow:0 0 8px var(--sql);animation:pulse 2s ease infinite}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+    /* Sidebar */
+    .sidebar{border-right:1px solid var(--border);background:var(--bg2);padding:24px 0;display:flex;flex-direction:column;overflow-y:auto}
+    .sidebar-section{padding:0 20px 20px;border-bottom:1px solid var(--border);margin-bottom:8px}
+    .sidebar-label{font-size:.65rem;font-family:var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--text3);margin-bottom:12px;padding-top:4px}
+    .route-legend{display:flex;flex-direction:column;gap:8px}
+    .legend-item{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border-radius:var(--r);border:1px solid var(--border);cursor:pointer;transition:all .2s}
+    .legend-item:hover{border-color:var(--border2);background:var(--bg3)}
+    .legend-item.active-sql{border-color:var(--sql);background:var(--sql-dim)}
+    .legend-item.active-rag{border-color:var(--rag);background:var(--rag-dim)}
+    .legend-item.active-hybrid{border-color:var(--hybrid);background:var(--hybrid-dim)}
+    .legend-dot{width:8px;height:8px;border-radius:50%;margin-top:5px;flex-shrink:0}
+    .legend-dot-sql{background:var(--sql);box-shadow:0 0 6px var(--sql-glow)}
+    .legend-dot-rag{background:var(--rag);box-shadow:0 0 6px var(--rag-glow)}
+    .legend-dot-hybrid{background:var(--hybrid);box-shadow:0 0 6px var(--hybrid-glow)}
+    .legend-text strong{display:block;font-size:.8rem;font-weight:600;color:var(--text)}
+    .legend-text span{font-size:.71rem;color:var(--text2);line-height:1.4}
+    .sample-queries{display:flex;flex-direction:column;gap:6px}
+    .sample-btn{background:none;border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text2);font-size:.75rem;font-family:var(--sans);line-height:1.4;text-align:left;cursor:pointer;transition:all .18s;display:flex;align-items:flex-start;gap:8px}
+    .sample-btn:hover{background:var(--bg3);border-color:var(--border2);color:var(--text)}
+    .sample-tag{font-family:var(--mono);font-size:.6rem;padding:2px 5px;border-radius:4px;flex-shrink:0;margin-top:1px}
+    .tag-sql{color:var(--sql);background:var(--sql-dim)}
+    .tag-rag{color:var(--rag);background:var(--rag-dim)}
+    .tag-hybrid{color:var(--hybrid);background:var(--hybrid-dim)}
+    .history-list{display:flex;flex-direction:column;gap:4px}
+    .history-item{padding:8px 12px;border-radius:8px;cursor:pointer;font-size:.75rem;color:var(--text2);display:flex;align-items:center;gap:8px;overflow:hidden;transition:all .15s;border:1px solid transparent}
+    .history-item span:last-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .history-item:hover{background:var(--bg3);color:var(--text);border-color:var(--border)}
+    .history-icon{font-size:.65rem;flex-shrink:0}
+
+    /* Main */
+    .main{display:flex;flex-direction:column;background:var(--bg);overflow:hidden}
+    .messages{flex:1;overflow-y:auto;padding:32px 40px;display:flex;flex-direction:column;gap:24px}
+    .messages::-webkit-scrollbar{width:4px}
+    .messages::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px}
+
+    /* Welcome */
+    .welcome{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:22px;padding:60px 40px;animation:fadeUp .5s ease}
+    .welcome-glyph{width:72px;height:72px;background:linear-gradient(135deg,var(--sql-dim),var(--rag-dim));border:1px solid var(--border2);border-radius:20px;display:grid;place-items:center;font-size:2rem;position:relative}
+    .welcome-glyph::after{content:'';position:absolute;inset:-1px;border-radius:20px;background:linear-gradient(135deg,var(--sql),var(--rag));z-index:-1;opacity:.3;filter:blur(8px)}
+    .welcome h1{font-family:var(--display);font-size:2rem;font-weight:800;letter-spacing:-.03em;background:linear-gradient(135deg,var(--text) 0%,var(--text2) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+    .welcome p{color:var(--text2);max-width:440px;font-size:.9rem;line-height:1.7}
+    .welcome-note{display:flex;align-items:center;gap:8px;background:rgba(255,144,64,.08);border:1px solid rgba(255,144,64,.3);border-radius:8px;padding:8px 14px;font-size:.75rem;color:var(--hybrid);font-family:var(--mono)}
+    .welcome-chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;max-width:520px}
+    .welcome-chip{padding:6px 14px;border-radius:100px;background:var(--bg3);border:1px solid var(--border2);color:var(--text2);font-size:.75rem;cursor:pointer;transition:all .15s;font-family:var(--mono)}
+    .welcome-chip:hover{color:var(--text);border-color:var(--text3)}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+
+    /* Messages */
+    .msg{display:flex;gap:14px;animation:msgIn .3s ease}
+    @keyframes msgIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+    .msg-avatar{width:32px;height:32px;border-radius:8px;flex-shrink:0;display:grid;place-items:center;font-size:.8rem;background:var(--bg3);border:1px solid var(--border);color:var(--text2);margin-top:2px}
+    .msg-user .msg-avatar{background:var(--bg2);color:var(--text);font-size:.7rem;font-family:var(--mono)}
+    .msg-body{flex:1;min-width:0}
+    .msg-meta{display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap}
+    .msg-name{font-size:.78rem;font-weight:600;color:var(--text2)}
+    .msg-time{font-size:.68rem;color:var(--text3);font-family:var(--mono)}
+    .msg-route-badge{font-family:var(--mono);font-size:.62rem;padding:2px 8px;border-radius:100px;border:1px solid;text-transform:uppercase;letter-spacing:.06em}
+    .badge-sql{color:var(--sql);border-color:var(--sql);background:var(--sql-dim)}
+    .badge-rag{color:var(--rag);border-color:var(--rag);background:var(--rag-dim)}
+    .badge-hybrid{color:var(--hybrid);border-color:var(--hybrid);background:var(--hybrid-dim)}
+    .msg-content{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:16px 20px;font-size:.88rem;line-height:1.75;color:var(--text);position:relative;overflow:hidden}
+    .msg-user .msg-content{background:var(--bg3);border-color:var(--border2)}
+    .msg-content::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:2px 0 0 2px}
+    .route-sql .msg-content::before{background:var(--sql)}
+    .route-rag .msg-content::before{background:var(--rag)}
+    .route-hybrid .msg-content::before{background:var(--hybrid)}
+    .msg-content p{margin-bottom:.5em}
+    .msg-content p:last-child{margin-bottom:0}
+    .msg-content strong{color:var(--text)}
+
+    /* Data table */
+    .data-table-wrap{overflow-x:auto;margin:12px 0 4px;border-radius:8px;border:1px solid var(--border)}
+    .data-table{width:100%;border-collapse:collapse;font-size:.8rem;font-family:var(--mono)}
+    .data-table th{background:var(--bg3);padding:7px 14px;text-align:left;color:var(--text2);font-weight:500;font-size:.68rem;letter-spacing:.06em;text-transform:uppercase;border-bottom:1px solid var(--border2)}
+    .data-table td{padding:7px 14px;color:var(--text);border-bottom:1px solid var(--border)}
+    .data-table tr:last-child td{border-bottom:none}
+    .data-table tr:hover td{background:rgba(255,255,255,.02)}
+    .num-cell{text-align:right;color:var(--sql);font-weight:500}
+    .rank-cell{text-align:center;color:var(--text3);font-weight:600}
+
+    /* SQL block */
+    .sql-block{background:#0d1117;border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin:10px 0 4px;font-family:var(--mono);font-size:.78rem;line-height:1.7;overflow-x:auto;white-space:pre}
+    .sql-kw{color:#ff7b72}
+    .sql-fn{color:#d2a8ff}
+    .sql-str{color:#a5d6ff}
+    .sql-col{color:var(--sql)}
+    .sql-comment{color:var(--text3);font-style:italic}
+
+    /* Sources */
+    .msg-sources{display:flex;align-items:center;gap:6px;margin-top:10px;flex-wrap:wrap}
+    .source-label{font-size:.68rem;color:var(--text3);font-family:var(--mono)}
+    .source-chip{font-size:.68rem;font-family:var(--mono);padding:2px 8px;border-radius:4px;background:var(--bg3);border:1px solid var(--border);color:var(--text2)}
+
+    /* Route card */
+    .route-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:12px 16px;margin-top:10px;display:flex;gap:20px;flex-wrap:wrap}
+    .route-stat{display:flex;flex-direction:column;gap:2px}
+    .route-stat-label{font-size:.62rem;font-family:var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--text3)}
+    .route-stat-val{font-size:.8rem;font-family:var(--mono);color:var(--text)}
+    .confidence-bar{display:flex;align-items:center;gap:8px;margin-top:4px}
+    .bar-track{flex:1;height:4px;background:var(--border);border-radius:2px;overflow:hidden}
+    .bar-fill{height:100%;border-radius:2px;transition:width .7s cubic-bezier(.16,1,.3,1)}
+    .bar-fill-sql{background:var(--sql)}
+    .bar-fill-rag{background:var(--rag)}
+    .bar-fill-hybrid{background:var(--hybrid)}
+    .bar-pct{font-size:.7rem;font-family:var(--mono);color:var(--text2);width:34px;text-align:right}
+
+    /* Thinking */
+    .thinking{display:flex;align-items:center;gap:10px;padding:14px 20px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);width:fit-content}
+    .think-dots{display:flex;gap:4px}
+    .think-dot{width:6px;height:6px;border-radius:50%;background:var(--text3);animation:thinkBounce 1.2s ease infinite}
+    .think-dot:nth-child(2){animation-delay:.15s}
+    .think-dot:nth-child(3){animation-delay:.3s}
+    @keyframes thinkBounce{0%,80%,100%{transform:translateY(0);opacity:.4}40%{transform:translateY(-5px);opacity:1}}
+    .think-label{font-size:.78rem;color:var(--text3);font-family:var(--mono)}
+
+    /* Input */
+    .input-area{border-top:1px solid var(--border);padding:20px 40px 24px;background:var(--bg)}
+    .input-row{display:flex;gap:12px;align-items:flex-end}
+    .input-wrap{flex:1}
+    textarea{width:100%;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r2);padding:14px 16px;color:var(--text);font-family:var(--sans);font-size:.9rem;line-height:1.5;resize:none;outline:none;transition:border-color .2s,box-shadow .2s;min-height:52px;max-height:160px}
+    textarea::placeholder{color:var(--text3)}
+    textarea:focus{border-color:var(--rag);box-shadow:0 0 0 3px rgba(123,108,255,.08)}
+    .force-route-row{display:flex;align-items:center;gap:6px;margin-top:8px;flex-wrap:wrap}
+    .force-label{font-size:.7rem;color:var(--text3);font-family:var(--mono)}
+    .route-toggle{display:flex;gap:4px}
+    .rt-btn{background:none;border:1px solid var(--border);border-radius:6px;padding:3px 9px;color:var(--text3);font-size:.68rem;font-family:var(--mono);cursor:pointer;transition:all .15s}
+    .rt-btn:hover{border-color:var(--border2);color:var(--text2)}
+    .rt-btn.active-auto{color:var(--text2);border-color:var(--border2);background:var(--bg3)}
+    .rt-btn.active-sql{color:var(--sql);border-color:var(--sql);background:var(--sql-dim)}
+    .rt-btn.active-rag{color:var(--rag);border-color:var(--rag);background:var(--rag-dim)}
+    .rt-btn.active-hybrid{color:var(--hybrid);border-color:var(--hybrid);background:var(--hybrid-dim)}
+    .send-btn{width:52px;height:52px;border-radius:var(--r2);background:linear-gradient(135deg,var(--sql),var(--rag));border:none;cursor:pointer;display:grid;place-items:center;font-size:1.4rem;flex-shrink:0;transition:all .2s;color:#fff;font-weight:700;line-height:1}
+    .send-btn:hover{transform:scale(1.05);box-shadow:0 4px 20px var(--rag-glow)}
+    .send-btn:active{transform:scale(.97)}
+    .send-btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
+    .input-footer{display:flex;align-items:center;justify-content:space-between;margin-top:8px;flex-wrap:wrap;gap:6px}
+    .input-hint{font-size:.68rem;color:var(--text3);font-family:var(--mono)}
+    .api-url-row{display:flex;align-items:center;gap:8px}
+    .api-label{font-size:.68rem;color:var(--text3);font-family:var(--mono)}
+    .api-input{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:3px 8px;color:var(--text2);font-family:var(--mono);font-size:.7rem;outline:none;width:200px;transition:border-color .15s}
+    .api-input:focus{border-color:var(--rag)}
+
+    /* Pipeline */
+    .pipeline-vis{display:flex;align-items:center;gap:6px;margin:10px 0 4px;flex-wrap:wrap}
+    .pipe-step{display:flex;align-items:center;gap:6px}
+    .pipe-node{padding:4px 10px;border-radius:6px;border:1px solid;font-size:.68rem;font-family:var(--mono)}
+    .pipe-arrow{color:var(--text3);font-size:.7rem}
+
+    ::-webkit-scrollbar{width:5px;height:5px}
+    ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px}
+    @media(max-width:768px){.app{grid-template-columns:1fr}.sidebar{display:none}.messages{padding:24px 20px}.input-area{padding:16px 20px 20px}}
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <header>
+    <div class="logo"><div class="logo-mark">⟳</div>HybridIQ</div>
+    <div class="header-pills">
+      <span class="pill pill-sql">SQL</span>
+      <span class="pill pill-rag">RAG</span>
+      <span class="pill pill-hybrid">HYBRID</span>
+    </div>
+    <div class="header-right">
+      <div class="demo-badge"><div class="demo-dot"></div>DEMO MODE</div>
+      <div class="header-status">
+        <div class="status-dot" id="statusDot"></div>
+        <span id="apiStatus">mock engine active</span>
+      </div>
+    </div>
+  </header>
+
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Route Types</div>
+      <div class="route-legend">
+        <div class="legend-item" id="leg-sql">
+          <div class="legend-dot legend-dot-sql"></div>
+          <div class="legend-text"><strong>SQL Route</strong><span>Numeric queries, aggregations, structured data filters</span></div>
+        </div>
+        <div class="legend-item" id="leg-rag">
+          <div class="legend-dot legend-dot-rag"></div>
+          <div class="legend-text"><strong>RAG Route</strong><span>Documents, policies, qualitative context retrieval</span></div>
+        </div>
+        <div class="legend-item" id="leg-hybrid">
+          <div class="legend-dot legend-dot-hybrid"></div>
+          <div class="legend-text"><strong>Hybrid Route</strong><span>Data + documents synthesized together</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Sample Queries</div>
+      <div class="sample-queries" id="sampleList"></div>
+    </div>
+    <div class="sidebar-section" style="flex:1">
+      <div class="sidebar-label">Query History</div>
+      <div class="history-list" id="historyList">
+        <div style="font-size:.73rem;color:var(--text3);font-family:var(--mono);padding:4px 0">No history yet</div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="messages" id="messages">
+      <div class="welcome" id="welcome">
+        <div class="welcome-glyph">⟁</div>
+        <h1>SQL + RAG Hybrid Intelligence</h1>
+        <p>Ask any business question. The router decides whether to query the database, search documents, or synthesize both.</p>
+        <div class="welcome-note">⚡ Running in demo mode — fully functional without a backend. Connect your API URL when ready.</div>
+        <div class="welcome-chips" id="welcomeChips"></div>
+      </div>
+    </div>
+    <div class="input-area">
+      <div class="input-row">
+        <div class="input-wrap">
+          <textarea id="queryInput" placeholder="e.g. 'Q3 revenue by region', 'What is our refund policy?', 'Does Q3 meet policy targets?'" rows="1"></textarea>
+          <div class="force-route-row">
+            <span class="force-label">force route:</span>
+            <div class="route-toggle">
+              <button class="rt-btn" data-route="auto"   onclick="setForceRoute('auto')">auto</button>
+              <button class="rt-btn" data-route="sql"    onclick="setForceRoute('sql')">sql</button>
+              <button class="rt-btn" data-route="rag"    onclick="setForceRoute('rag')">rag</button>
+              <button class="rt-btn" data-route="hybrid" onclick="setForceRoute('hybrid')">hybrid</button>
+            </div>
+          </div>
+        </div>
+        <button class="send-btn" id="sendBtn" onclick="handleSend()" title="Send (Ctrl+Enter)">&#x2191;</button>
+      </div>
+      <div class="input-footer">
+        <span class="input-hint">Ctrl+Enter to send &nbsp;·&nbsp; Demo works without backend</span>
+        <div class="api-url-row">
+          <span class="api-label">API:</span>
+          <input class="api-input" id="apiUrlInput" value="http://localhost:8000" />
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   IN-MEMORY DATASET
+═══════════════════════════════════════════════════════════════ */
+const DB = {
+  orders: [
+    {id:1001,customer:"Acme Corp",     product:"Enterprise Suite",  cat:"Software",  qty:5, amount:24500,date:"2024-01-15",region:"North",  status:"completed"},
+    {id:1002,customer:"TechVision",    product:"Cloud Storage Pro", cat:"Software",  qty:2, amount:3200, date:"2024-01-22",region:"West",   status:"completed"},
+    {id:1003,customer:"GlobalTrade",   product:"Hardware Bundle",   cat:"Hardware",  qty:10,amount:18750,date:"2024-02-03",region:"East",   status:"completed"},
+    {id:1004,customer:"StartupXYZ",    product:"Consulting Pack",   cat:"Services",  qty:1, amount:8500, date:"2024-02-14",region:"South",  status:"completed"},
+    {id:1005,customer:"MegaRetail",    product:"Data Analytics",    cat:"Software",  qty:3, amount:15600,date:"2024-03-01",region:"Central",status:"completed"},
+    {id:1006,customer:"FinanceCo",     product:"Security Suite",    cat:"Software",  qty:4, amount:12800,date:"2024-03-18",region:"North",  status:"completed"},
+    {id:1007,customer:"HealthPlus",    product:"IoT Sensors",       cat:"Hardware",  qty:50,amount:9250, date:"2024-04-05",region:"West",   status:"completed"},
+    {id:1008,customer:"EduLearn",      product:"Training License",  cat:"Services",  qty:20,amount:6000, date:"2024-04-20",region:"East",   status:"completed"},
+    {id:1009,customer:"LogiTrans",     product:"Enterprise Suite",  cat:"Software",  qty:3, amount:14700,date:"2024-05-11",region:"South",  status:"completed"},
+    {id:1010,customer:"MediaGroup",    product:"Cloud Storage Pro", cat:"Software",  qty:8, amount:12800,date:"2024-05-28",region:"Central",status:"completed"},
+    {id:1011,customer:"AutoDrive",     product:"Hardware Bundle",   cat:"Hardware",  qty:7, amount:13125,date:"2024-06-09",region:"North",  status:"completed"},
+    {id:1012,customer:"CityBank",      product:"Security Suite",    cat:"Software",  qty:6, amount:19200,date:"2024-06-22",region:"West",   status:"completed"},
+    {id:1013,customer:"FoodChain",     product:"Consulting Pack",   cat:"Services",  qty:2, amount:17000,date:"2024-07-08",region:"East",   status:"completed"},
+    {id:1014,customer:"Acme Corp",     product:"Data Analytics",    cat:"Software",  qty:5, amount:26000,date:"2024-07-19",region:"North",  status:"completed"},
+    {id:1015,customer:"TechVision",    product:"IoT Sensors",       cat:"Hardware",  qty:30,amount:5550, date:"2024-08-02",region:"West",   status:"completed"},
+    {id:1016,customer:"GlobalTrade",   product:"Enterprise Suite",  cat:"Software",  qty:4, amount:19600,date:"2024-08-15",region:"East",   status:"pending"},
+    {id:1017,customer:"StartupXYZ",    product:"Training License",  cat:"Services",  qty:15,amount:4500, date:"2024-09-01",region:"South",  status:"completed"},
+    {id:1018,customer:"MegaRetail",    product:"Hardware Bundle",   cat:"Hardware",  qty:12,amount:22500,date:"2024-09-14",region:"Central",status:"completed"},
+    {id:1019,customer:"FinanceCo",     product:"Cloud Storage Pro", cat:"Software",  qty:5, amount:8000, date:"2024-09-28",region:"North",  status:"completed"},
+    {id:1020,customer:"HealthPlus",    product:"Security Suite",    cat:"Software",  qty:3, amount:9600, date:"2024-10-10",region:"West",   status:"refunded"},
+    {id:1021,customer:"EduLearn",      product:"Data Analytics",    cat:"Software",  qty:2, amount:10400,date:"2024-10-25",region:"East",   status:"completed"},
+    {id:1022,customer:"LogiTrans",     product:"Consulting Pack",   cat:"Services",  qty:3, amount:25500,date:"2024-11-07",region:"South",  status:"completed"},
+    {id:1023,customer:"MediaGroup",    product:"Enterprise Suite",  cat:"Software",  qty:6, amount:29400,date:"2024-11-20",region:"Central",status:"completed"},
+    {id:1024,customer:"AutoDrive",     product:"IoT Sensors",       cat:"Hardware",  qty:80,amount:14800,date:"2024-12-04",region:"North",  status:"completed"},
+    {id:1025,customer:"CityBank",      product:"Data Analytics",    cat:"Software",  qty:4, amount:20800,date:"2024-12-18",region:"West",   status:"completed"},
+  ],
+  customers: [
+    {id:"C001",name:"Acme Corp",    seg:"Enterprise",rev:51500,orders:3,joined:"2021-03-12",region:"North"},
+    {id:"C002",name:"TechVision",   seg:"SMB",       rev:16350,orders:3,joined:"2022-01-08",region:"West"},
+    {id:"C003",name:"GlobalTrade",  seg:"Enterprise",rev:52450,orders:3,joined:"2020-11-30",region:"East"},
+    {id:"C004",name:"StartupXYZ",   seg:"SMB",       rev:13000,orders:2,joined:"2023-06-15",region:"South"},
+    {id:"C005",name:"MegaRetail",   seg:"Enterprise",rev:38100,orders:2,joined:"2021-09-22",region:"Central"},
+    {id:"C006",name:"FinanceCo",    seg:"Enterprise",rev:32000,orders:2,joined:"2020-07-18",region:"North"},
+    {id:"C007",name:"HealthPlus",   seg:"SMB",       rev:14800,orders:2,joined:"2022-04-05",region:"West"},
+    {id:"C008",name:"EduLearn",     seg:"Consumer",  rev:16400,orders:2,joined:"2023-01-20",region:"East"},
+    {id:"C009",name:"LogiTrans",    seg:"Enterprise",rev:40200,orders:2,joined:"2021-12-01",region:"South"},
+    {id:"C010",name:"MediaGroup",   seg:"SMB",       rev:42200,orders:2,joined:"2022-08-14",region:"Central"},
+    {id:"C011",name:"AutoDrive",    seg:"Enterprise",rev:27925,orders:2,joined:"2021-05-27",region:"North"},
+    {id:"C012",name:"CityBank",     seg:"Enterprise",rev:40000,orders:2,joined:"2020-03-09",region:"West"},
+  ],
+  products: [
+    {id:"P01",name:"Enterprise Suite",  cat:"Software",  price:4900,sold:18, stock:999,rev:88200},
+    {id:"P02",name:"Cloud Storage Pro", cat:"Software",  price:1600,sold:15, stock:999,rev:24000},
+    {id:"P03",name:"Hardware Bundle",   cat:"Hardware",  price:1875,sold:29, stock:84, rev:54375},
+    {id:"P04",name:"Consulting Pack",   cat:"Services",  price:8500,sold:6,  stock:999,rev:51000},
+    {id:"P05",name:"Data Analytics",    cat:"Software",  price:5200,sold:14, stock:999,rev:72800},
+    {id:"P06",name:"Security Suite",    cat:"Software",  price:3200,sold:13, stock:999,rev:41600},
+    {id:"P07",name:"IoT Sensors",       cat:"Hardware",  price:185, sold:160,stock:220,rev:29600},
+    {id:"P08",name:"Training License",  cat:"Services",  price:300, sold:35, stock:999,rev:10500},
+  ],
+  employees: [
+    {id:"E001",name:"Sarah Chen",      dept:"Engineering",salary:128000,hired:"2020-02-14",perf:"Excellent"},
+    {id:"E002",name:"Marcus Williams", dept:"Sales",      salary:95000, hired:"2021-06-01",perf:"Good"},
+    {id:"E003",name:"Priya Sharma",    dept:"Engineering",salary:142000,hired:"2019-09-15",perf:"Excellent"},
+    {id:"E004",name:"James Okoro",     dept:"Marketing",  salary:88000, hired:"2022-03-22",perf:"Good"},
+    {id:"E005",name:"Anna Kovacs",     dept:"Finance",    salary:105000,hired:"2020-11-08",perf:"Excellent"},
+    {id:"E006",name:"David Park",      dept:"Sales",      salary:92000, hired:"2021-01-17",perf:"Good"},
+    {id:"E007",name:"Ling Zhang",      dept:"Engineering",salary:138000,hired:"2020-05-03",perf:"Excellent"},
+    {id:"E008",name:"Tom Bradley",     dept:"HR",         salary:82000, hired:"2023-02-28",perf:"Good"},
+    {id:"E009",name:"Fatima Al-Zahra", dept:"Marketing",  salary:91000, hired:"2022-07-11",perf:"Good"},
+    {id:"E010",name:"Carlos Rivera",   dept:"Engineering",salary:119000,hired:"2021-10-05",perf:"Excellent"},
+  ],
+};
+
+const QUARTERS = {
+  Q1:{label:"Q1 2024",s:"2024-01-01",e:"2024-03-31"},
+  Q2:{label:"Q2 2024",s:"2024-04-01",e:"2024-06-30"},
+  Q3:{label:"Q3 2024",s:"2024-07-01",e:"2024-09-30"},
+  Q4:{label:"Q4 2024",s:"2024-10-01",e:"2024-12-31"},
+};
+
+const fmt$ = n => "$"+Number(n).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmtN = n => Number(n).toLocaleString("en-US");
+const sum  = (arr,k) => arr.reduce((a,b)=>a+(b[k]||0),0);
+const inRange = (start,end) => DB.orders.filter(o=>o.date>=start&&o.date<=end&&o.status==="completed");
+
+/* ─── DOCS ─── */
+const DOCS = [
+  {id:"refund",   src:"company_policy.txt",   topic:"refund return policy",
+   body:`<strong>Refund &amp; Return Policy (v3.2)</strong><br><br>
+Customers are eligible for a <strong>full refund within 30 days</strong> of purchase. Between 31–60 days a <strong>50% partial refund</strong> is issued. No refunds after 60 days unless the product is confirmed defective.<br><br>
+<em>Software licenses</em> require deactivation of all keys. <em>Hardware</em> must be returned in original packaging.<br><br>
+Refund processing time: <strong>5–7 business days</strong> to the original payment method.`},
+  {id:"leave",    src:"employee_handbook.pdf", topic:"parental leave maternity paternity",
+   body:`<strong>Parental Leave Policy</strong><br><br>
+Full-time employees are entitled to <strong>16 weeks paid leave</strong> (primary caregiver) or <strong>8 weeks</strong> (secondary caregiver) starting from birth or adoption date.<br><br>
+Submit Form HR-22 at least <strong>8 weeks in advance</strong> to manager and HR. Leave can be taken as one block or split into two periods within the first year.<br><br>
+<em>Eligibility:</em> Minimum 12 months continuous employment.`},
+  {id:"finance",  src:"finance_policy.pdf",   topic:"revenue target financial budget quarterly annual",
+   body:`<strong>Financial Policy &amp; Revenue Targets (FY 2024)</strong><br><br>
+Annual revenue target: <strong>$520,000</strong><br>
+Quarterly targets: Q1 — $120,000 &nbsp;|&nbsp; Q2 — $128,000 &nbsp;|&nbsp; Q3 — $138,000 &nbsp;|&nbsp; Q4 — $134,000<br><br>
+Any quarter below <strong>85% of target</strong> triggers a mandatory corrective action plan within 15 business days.<br>
+Purchase orders above $50,000 require CFO sign-off. Dept managers approved up to $5,000.`},
+  {id:"conduct",  src:"employee_handbook.pdf", topic:"code conduct remote work behavior",
+   body:`<strong>Code of Conduct — Remote Work Guidelines</strong><br><br>
+Core hours: <strong>10:00 AM – 3:00 PM local time</strong>. Video required for all team meetings.<br><br>
+The company provides a <strong>$1,500 annual home-office stipend</strong>. Internet expenses up to $50/month are reimbursable.<br><br>
+Data security: Only approved VPN may be used when accessing internal systems. Personal devices require MDM enrollment.`},
+  {id:"catalog",  src:"product_catalog.md",    topic:"product feature catalog enterprise analytics security",
+   body:`<strong>Product Catalog Highlights</strong><br><br>
+<em>Enterprise Suite</em> — Full-stack BI platform. Real-time dashboards, role-based access, API integrations. Up to 500 concurrent users. <strong>$4,900/license</strong>.<br><br>
+<em>Data Analytics</em> — ML-powered forecasting, anomaly detection, custom report builder. Integrates with all major data warehouses. <strong>$5,200/license</strong>.<br><br>
+<em>Security Suite</em> — Zero-trust architecture, SIEM integration, SOC 2 Type II compliant. <strong>$3,200/license</strong>.`},
+  {id:"certs",    src:"company_overview.pdf",  topic:"certification compliance iso soc gdpr",
+   body:`<strong>Certifications &amp; Compliance</strong><br><br>
+The company holds:<br>
+&bull; <strong>ISO 27001:2022</strong> — Information Security Management<br>
+&bull; <strong>SOC 2 Type II</strong> — Security, Availability &amp; Confidentiality<br>
+&bull; <strong>ISO 9001:2015</strong> — Quality Management Systems<br>
+&bull; <strong>GDPR Compliant</strong> — EU data processing<br><br>
+All certifications reviewed annually. Last audit: <em>October 2024</em>.`},
+];
+
+/* ═══════════════════════════════════════════════════════════════
+   ROUTER
+═══════════════════════════════════════════════════════════════ */
+const SQL_KW = ["total","revenue","sales","sum","average","avg","how many","count","top","bottom","best","worst","highest","lowest","most","least","rank","list","by region","by quarter","by month","by category","by product","by customer","q1","q2","q3","q4","quarter","2024","salary","employee","order","product","customer","stock","price","amount","budget","spend","profit","growth","trend","which region","who","all orders","pending","completed"];
+const RAG_KW = ["policy","refund","return","leave","parental","maternity","paternity","handbook","certification","iso","soc","gdpr","compliance","conduct","remote work","stipend","guidelines","rules","procedure","process","how do","what does","explain","describe","what is our","what are our","according to","features","catalog","warranty","terms","eligibility","entitled","reimburs","approve","approval"];
+const HYB_KW = ["meet","target","goal","benchmark","exceed","threshold","versus policy","compared to policy","against target","above target","below target","within","salary band","underperform","performing","hit target","achieve","does our","does the"];
+
+function classify(q){
+  const ql=q.toLowerCase();
+  let s=0,r=0,h=0;
+  SQL_KW.forEach(k=>{ if(ql.includes(k)) s++; });
+  RAG_KW.forEach(k=>{ if(ql.includes(k)) r++; });
+  HYB_KW.forEach(k=>{ if(ql.includes(k)) h++; });
+  if(s>0&&r>0) h+=2;
+  if(h>=2&&s>=1&&r>=1) return {route:"hybrid",confidence:Math.min(.55+(h/(s+r+h))*.38,.96),reason:`Mixed intent detected (${s} SQL + ${r} RAG signals). Routing to hybrid synthesis pipeline.`};
+  if(s>r) return {route:"sql",confidence:Math.min(.72+s*.035,.97),reason:`${s} SQL signal(s) detected — aggregation or structured data query. Routing to SQL Agent with schema injection.`};
+  if(r>0) return {route:"rag",confidence:Math.min(.70+r*.04,.96),reason:`${r} RAG signal(s) detected — policy or document query. Routing to ChromaDB vector retrieval.`};
+  return {route:"rag",confidence:.60,reason:"Ambiguous query — defaulting to RAG document search."};
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   SQL ANSWER ENGINE
+═══════════════════════════════════════════════════════════════ */
+function sqlAnswer(q){
+  const ql=q.toLowerCase();
+
+  if((ql.includes("q3")||ql.includes("quarter 3"))&&(ql.includes("revenue")||ql.includes("sales"))){
+    const rows=inRange(QUARTERS.Q3.s,QUARTERS.Q3.e);
+    const total=sum(rows,"amount");
+    const byRegion=[...new Set(rows.map(r=>r.region))].map(reg=>({reg,rev:sum(rows.filter(r=>r.region===reg),"amount"),cnt:rows.filter(r=>r.region===reg).length})).sort((a,b)=>b.rev-a.rev);
+    return {answer:`Q3 2024 total completed revenue: <strong>${fmt$(total)}</strong> across ${rows.length} orders.`,
+      table:{cols:["Region","Orders","Revenue"],rows:byRegion.map(r=>[r.reg,r.cnt,fmt$(r.rev)])},
+      sql:`<span class="sql-kw">SELECT</span> region,\n  <span class="sql-fn">COUNT</span>(*) <span class="sql-kw">AS</span> orders,\n  <span class="sql-fn">SUM</span>(amount) <span class="sql-kw">AS</span> revenue\n<span class="sql-kw">FROM</span> orders\n<span class="sql-kw">WHERE</span> order_date <span class="sql-kw">BETWEEN</span> <span class="sql-str">'2024-07-01'</span> <span class="sql-kw">AND</span> <span class="sql-str">'2024-09-30'</span>\n  <span class="sql-kw">AND</span> status = <span class="sql-str">'completed'</span>\n<span class="sql-kw">GROUP BY</span> region <span class="sql-kw">ORDER BY</span> revenue <span class="sql-kw">DESC</span>;`,
+      sources:["Business Database (SQL)"]};
+  }
+
+  if((ql.includes("region")||ql.includes("regional"))&&(ql.includes("revenue")||ql.includes("sales")||ql.includes("breakdown"))){
+    const done=DB.orders.filter(o=>o.status==="completed");
+    const byR=[...new Set(done.map(o=>o.region))].map(reg=>({reg,rev:sum(done.filter(o=>o.region===reg),"amount"),cnt:done.filter(o=>o.region===reg).length})).sort((a,b)=>b.rev-a.rev);
+    const total=sum(byR,"rev");
+    return {answer:`Revenue by region (2024, completed orders) — total <strong>${fmt$(total)}</strong>:`,
+      table:{cols:["Rank","Region","Orders","Revenue","Share"],rows:byR.map((r,i)=>[i+1,r.reg,r.cnt,fmt$(r.rev),((r.rev/total)*100).toFixed(1)+"%"])},
+      sql:`<span class="sql-kw">SELECT</span> region, <span class="sql-fn">COUNT</span>(*) orders, <span class="sql-fn">SUM</span>(amount) revenue,\n  <span class="sql-fn">ROUND</span>(<span class="sql-fn">SUM</span>(amount)*100.0/<span class="sql-fn">SUM</span>(<span class="sql-fn">SUM</span>(amount))<span class="sql-kw">OVER</span>(),1) share_pct\n<span class="sql-kw">FROM</span> orders <span class="sql-kw">WHERE</span> status=<span class="sql-str">'completed'</span>\n<span class="sql-kw">GROUP BY</span> region <span class="sql-kw">ORDER BY</span> revenue <span class="sql-kw">DESC</span>;`,
+      sources:["Business Database (SQL)"]};
+  }
+
+  if(ql.includes("top")&&(ql.includes("product")||ql.includes("sale"))){
+    const n=parseInt(ql.match(/top\s*(\d+)/)?.[1]||5);
+    const sorted=[...DB.products].sort((a,b)=>b.rev-a.rev).slice(0,n);
+    return {answer:`Top ${n} products by 2024 revenue:`,
+      table:{cols:["Rank","Product","Category","Units Sold","Revenue"],rows:sorted.map((p,i)=>[i+1,p.name,p.cat,fmtN(p.sold),fmt$(p.rev)])},
+      sql:`<span class="sql-kw">SELECT</span> p.name, p.category,\n  <span class="sql-fn">SUM</span>(o.quantity) units_sold, <span class="sql-fn">SUM</span>(o.amount) revenue\n<span class="sql-kw">FROM</span> orders o <span class="sql-kw">JOIN</span> products p <span class="sql-kw">ON</span> o.product_id=p.product_id\n<span class="sql-kw">WHERE</span> o.status=<span class="sql-str">'completed'</span>\n<span class="sql-kw">GROUP BY</span> p.product_id <span class="sql-kw">ORDER BY</span> revenue <span class="sql-kw">DESC</span> <span class="sql-kw">LIMIT</span> ${n};`,
+      sources:["Business Database (SQL)"]};
+  }
+
+  if(ql.includes("quarter")||(ql.match(/q[1-4]/)&&ql.includes("revenue"))||ql.includes("quarterly")){
+    const qdata=Object.entries(QUARTERS).map(([k,v])=>{const rows=inRange(v.s,v.e);return{k,label:v.label,amt:sum(rows,"amount"),cnt:rows.length};});
+    const total=sum(qdata,"amt");
+    return {answer:`Quarterly revenue breakdown FY 2024 — total <strong>${fmt$(total)}</strong>:`,
+      table:{cols:["Quarter","Orders","Revenue","QoQ Growth"],rows:qdata.map((q,i)=>{const prev=qdata[i-1];const g=prev&&prev.amt>0?((q.amt-prev.amt)/prev.amt*100).toFixed(1)+"%":"—";return[q.label,q.cnt,fmt$(q.amt),g];})},
+      sql:`<span class="sql-kw">SELECT</span> <span class="sql-kw">CASE</span> <span class="sql-kw">WHEN</span> strftime(<span class="sql-str">'%m'</span>,order_date)<span class="sql-kw">BETWEEN</span><span class="sql-str">'01'</span><span class="sql-kw">AND</span><span class="sql-str">'03'</span> <span class="sql-kw">THEN</span> <span class="sql-str">'Q1'</span>\n    <span class="sql-kw">WHEN</span> strftime(<span class="sql-str">'%m'</span>,order_date)<span class="sql-kw">BETWEEN</span><span class="sql-str">'04'</span><span class="sql-kw">AND</span><span class="sql-str">'06'</span> <span class="sql-kw">THEN</span> <span class="sql-str">'Q2'</span>\n    <span class="sql-kw">WHEN</span> strftime(<span class="sql-str">'%m'</span>,order_date)<span class="sql-kw">BETWEEN</span><span class="sql-str">'07'</span><span class="sql-kw">AND</span><span class="sql-str">'09'</span> <span class="sql-kw">THEN</span> <span class="sql-str">'Q3'</span>\n    <span class="sql-kw">ELSE</span> <span class="sql-str">'Q4'</span> <span class="sql-kw">END</span> quarter,\n  <span class="sql-fn">COUNT</span>(*) orders, <span class="sql-fn">SUM</span>(amount) revenue\n<span class="sql-kw">FROM</span> orders <span class="sql-kw">WHERE</span> status=<span class="sql-str">'completed'</span>\n<span class="sql-kw">GROUP BY</span> quarter <span class="sql-kw">ORDER BY</span> quarter;`,
+      sources:["Business Database (SQL)"]};
+  }
+
+  if((ql.includes("customer")||ql.includes("client"))&&(ql.includes("top")||ql.includes("best")||ql.includes("highest")||ql.includes("value")||ql.includes("revenue"))){
+    const sorted=[...DB.customers].sort((a,b)=>b.rev-a.rev).slice(0,5);
+    return {answer:"Top 5 customers by lifetime value:",
+      table:{cols:["Rank","Customer","Segment","Region","Orders","LTV"],rows:sorted.map((c,i)=>[i+1,c.name,c.seg,c.region,c.orders,fmt$(c.rev)])},
+      sql:`<span class="sql-kw">SELECT</span> c.name, c.segment, <span class="sql-fn">COUNT</span>(o.order_id) total_orders, <span class="sql-fn">SUM</span>(o.amount) ltv\n<span class="sql-kw">FROM</span> customers c <span class="sql-kw">JOIN</span> orders o <span class="sql-kw">ON</span> c.customer_id=o.customer_id\n<span class="sql-kw">WHERE</span> o.status=<span class="sql-str">'completed'</span>\n<span class="sql-kw">GROUP BY</span> c.customer_id <span class="sql-kw">ORDER BY</span> ltv <span class="sql-kw">DESC</span> <span class="sql-kw">LIMIT</span> 5;`,
+      sources:["Business Database (SQL)"]};
+  }
+
+  if(ql.includes("employee")||ql.includes("salary")||ql.includes("department")||ql.includes("staff")){
+    const depts=[...new Set(DB.employees.map(e=>e.dept))].map(d=>{
+      const es=DB.employees.filter(e=>e.dept===d);
+      return{dept:d,cnt:es.length,avg:sum(es,"salary")/es.length,total:sum(es,"salary")};
+    }).sort((a,b)=>b.avg-a.avg);
+    return {answer:`Salary breakdown across ${DB.employees.length} employees in ${depts.length} departments:`,
+      table:{cols:["Department","Headcount","Avg Salary","Total Payroll"],rows:depts.map(d=>[d.dept,d.cnt,fmt$(d.avg),fmt$(d.total)])},
+      sql:`<span class="sql-kw">SELECT</span> department, <span class="sql-fn">COUNT</span>(*) headcount,\n  <span class="sql-fn">ROUND</span>(<span class="sql-fn">AVG</span>(salary),2) avg_salary, <span class="sql-fn">SUM</span>(salary) total_payroll\n<span class="sql-kw">FROM</span> employees\n<span class="sql-kw">GROUP BY</span> department <span class="sql-kw">ORDER BY</span> avg_salary <span class="sql-kw">DESC</span>;`,
+      sources:["Business Database (SQL)"]};
+  }
+
+  if(ql.includes("average")||ql.includes("avg")){
+    const done=DB.orders.filter(o=>o.status==="completed");
+    const aov=sum(done,"amount")/done.length;
+    const byCat=[...new Set(done.map(o=>o.cat))].map(c=>({cat:c,aov:sum(done.filter(o=>o.cat===c),"amount")/done.filter(o=>o.cat===c).length})).sort((a,b)=>b.aov-a.aov);
+    return {answer:`Average Order Value (AOV): <strong>${fmt$(aov)}</strong> across ${done.length} completed orders.`,
+      table:{cols:["Category","AOV"],rows:byCat.map(c=>[c.cat,fmt$(c.aov)])},
+      sql:`<span class="sql-kw">SELECT</span> p.category, <span class="sql-fn">ROUND</span>(<span class="sql-fn">AVG</span>(o.amount),2) avg_order_value\n<span class="sql-kw">FROM</span> orders o <span class="sql-kw">JOIN</span> products p <span class="sql-kw">ON</span> o.product_id=p.product_id\n<span class="sql-kw">WHERE</span> o.status=<span class="sql-str">'completed'</span>\n<span class="sql-kw">GROUP BY</span> p.category <span class="sql-kw">ORDER BY</span> avg_order_value <span class="sql-kw">DESC</span>;`,
+      sources:["Business Database (SQL)"]};
+  }
+
+  if(ql.includes("how many")||ql.includes("count")){
+    const cmp=DB.orders.filter(o=>o.status==="completed").length;
+    const pnd=DB.orders.filter(o=>o.status==="pending").length;
+    const ref=DB.orders.filter(o=>o.status==="refunded").length;
+    const total=DB.orders.length;
+    return {answer:`Order status summary across <strong>${total} orders</strong> from ${DB.customers.length} customers:`,
+      table:{cols:["Status","Count","Share"],rows:[["Completed",cmp,((cmp/total)*100).toFixed(0)+"%"],["Pending",pnd,((pnd/total)*100).toFixed(0)+"%"],["Refunded",ref,((ref/total)*100).toFixed(0)+"%"]]},
+      sql:`<span class="sql-kw">SELECT</span> status, <span class="sql-fn">COUNT</span>(*) cnt,\n  <span class="sql-fn">ROUND</span>(<span class="sql-fn">COUNT</span>(*)*100.0/<span class="sql-fn">SUM</span>(<span class="sql-fn">COUNT</span>(*)) <span class="sql-kw">OVER</span>(),1) pct\n<span class="sql-kw">FROM</span> orders <span class="sql-kw">GROUP BY</span> status;`,
+      sources:["Business Database (SQL)"]};
+  }
+
+  /* fallback */
+  const total=sum(DB.orders.filter(o=>o.status==="completed"),"amount");
+  return {answer:`2024 overview — Total Revenue: <strong>${fmt$(total)}</strong> &nbsp;·&nbsp; Customers: <strong>${DB.customers.length}</strong> &nbsp;·&nbsp; Products: <strong>${DB.products.length}</strong> &nbsp;·&nbsp; Orders: <strong>${DB.orders.length}</strong>.<br><br>Try: "Q3 revenue by region", "top 5 products", "average order value", "employee salaries".`,
+    table:null,sql:null,sources:["Business Database (SQL)"]};
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   RAG ANSWER ENGINE
+═══════════════════════════════════════════════════════════════ */
+function ragAnswer(q){
+  const ql=q.toLowerCase();
+  let best=DOCS[0],bestScore=0;
+  DOCS.forEach(d=>{
+    let s=0;
+    d.topic.split(" ").forEach(t=>{ if(ql.includes(t)) s+=2; });
+    if(ql.includes("refund")||ql.includes("return")) s+=(d.id==="refund"?4:0);
+    if(ql.includes("leave")||ql.includes("parental")) s+=(d.id==="leave"?4:0);
+    if(ql.includes("certif")||ql.includes("iso")||ql.includes("soc")) s+=(d.id==="certs"?4:0);
+    if(ql.includes("target")||ql.includes("financial")||ql.includes("budget")) s+=(d.id==="finance"?4:0);
+    if(ql.includes("remote")||ql.includes("conduct")) s+=(d.id==="conduct"?4:0);
+    if(ql.includes("product")||ql.includes("catalog")||ql.includes("feature")) s+=(d.id==="catalog"?4:0);
+    if(s>bestScore){bestScore=s;best=d;}
+  });
+  return {answer:best.body,sources:[best.src]};
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   HYBRID ENGINE
+═══════════════════════════════════════════════════════════════ */
+function hybridAnswer(q){
+  const ql=q.toLowerCase();
+
+  if((ql.includes("q3")||ql.includes("quarter"))&&(ql.includes("target")||ql.includes("meet")||ql.includes("policy")||ql.includes("achieve"))){
+    const rows=inRange(QUARTERS.Q3.s,QUARTERS.Q3.e);
+    const actual=sum(rows,"amount");
+    const target=138000;
+    const pct=((actual/target)*100).toFixed(1);
+    const met=actual>=target;
+    return {
+      answer:`<strong>Synthesis: Q3 2024 Revenue vs. Financial Policy Target</strong><br><br>
+&#x1F4CA; <strong>Actual Q3 Revenue:</strong> ${fmt$(actual)} (${rows.length} completed orders)<br>
+&#x1F3AF; <strong>Policy Target (Q3):</strong> ${fmt$(target)}<br>
+&#x1F4C8; <strong>Achievement:</strong> ${pct}% of target &nbsp;&mdash;&nbsp; <span style="color:${met?"var(--sql)":"var(--hybrid)"}">${met?"&#x2705; TARGET MET":"&#x26A0;&#xFE0F; BELOW TARGET"}</span><br><br>
+${met?"Q3 performance exceeds the policy target. No corrective action plan required.":"Q3 revenue is below target. Per Financial Policy, a corrective action plan must be filed within 15 business days."}`,
+      table:{cols:["Metric","Value"],rows:[["Q3 Actual",fmt$(actual)],["Q3 Target",fmt$(target)],["Achievement %",pct+"%"],["Status",met?"On Track ✓":"Needs Review ⚠"]]},
+      sources:["Business Database (SQL)","finance_policy.pdf"],
+      sql:`<span class="sql-kw">SELECT</span> <span class="sql-fn">SUM</span>(amount) actual_q3,\n  138000 policy_target,\n  <span class="sql-fn">ROUND</span>(<span class="sql-fn">SUM</span>(amount)*100.0/138000,1) pct_achieved\n<span class="sql-kw">FROM</span> orders\n<span class="sql-kw">WHERE</span> order_date <span class="sql-kw">BETWEEN</span> <span class="sql-str">'2024-07-01'</span> <span class="sql-kw">AND</span> <span class="sql-str">'2024-09-30'</span>\n  <span class="sql-kw">AND</span> status=<span class="sql-str">'completed'</span>;`
+    };
+  }
+
+  const sr=sqlAnswer(q);
+  const rr=ragAnswer(q);
+  return {
+    answer:`<strong>Hybrid Analysis</strong><br><br><em>From the database:</em><br>${sr.answer}<br><br><em>From company documents:</em><br>${rr.answer}`,
+    table:sr.table,sql:sr.sql,
+    sources:[...new Set([...(sr.sources||[]),...(rr.sources||[])])]
+  };
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   MOCK API (with realistic delay)
+═══════════════════════════════════════════════════════════════ */
+async function mockAPI(q,fr){
+  await new Promise(r=>setTimeout(r,500+Math.random()*800));
+  const cl=classify(q);
+  const route=fr!=="auto"?fr:cl.route;
+  let res;
+  if(route==="sql")    res=sqlAnswer(q);
+  else if(route==="rag")   res=ragAnswer(q);
+  else                 res=hybridAnswer(q);
+  return {question:q,route_used:route,answer:res.answer,table:res.table||null,sql:res.sql||null,
+    confidence:cl.confidence,routing_reason:cl.reason,sources:res.sources||[],success:true};
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   REAL API → auto-fallback to mock
+═══════════════════════════════════════════════════════════════ */
+async function callAPI(q,fr,base){
+  try{
+    const body={question:q};
+    if(fr!=="auto") body.force_route=fr;
+    const res=await fetch(`${base}/query`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+    if(!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data=await res.json();
+    setStatus(true,"API connected");
+    return data;
+  }catch{
+    setStatus(false,"demo mode (mock engine)");
+    return mockAPI(q,fr);
+  }
+}
+function setStatus(ok,txt){
+  const d=document.getElementById("statusDot"),t=document.getElementById("apiStatus");
+  d.style.background=ok?"var(--sql)":"var(--hybrid)";
+  d.style.boxShadow=`0 0 8px ${ok?"var(--sql)":"var(--hybrid)"}`;
+  t.textContent=txt;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   UI
+═══════════════════════════════════════════════════════════════ */
+let forceRoute="auto",history=[],loading=false;
+
+const SAMPLES=[
+  {q:"What was Q3 2024 revenue by region?",        tag:"sql",    label:"Q3 revenue by region"},
+  {q:"List top 5 products by sales volume",         tag:"sql",    label:"Top 5 products"},
+  {q:"Show quarterly revenue breakdown",            tag:"sql",    label:"Quarterly breakdown"},
+  {q:"Average order value by category",             tag:"sql",    label:"Average order value"},
+  {q:"Top customers by lifetime value",             tag:"sql",    label:"Top customers (LTV)"},
+  {q:"What is our refund and return policy?",       tag:"rag",    label:"Refund policy"},
+  {q:"How do employees request parental leave?",    tag:"rag",    label:"Parental leave"},
+  {q:"What certifications does the company hold?",  tag:"rag",    label:"Certifications"},
+  {q:"Code of conduct for remote work?",            tag:"rag",    label:"Remote work rules"},
+  {q:"Does Q3 2024 revenue meet our policy target?",tag:"hybrid", label:"Q3 vs policy target"},
+];
+
+function init(){
+  const sl=document.getElementById("sampleList");
+  SAMPLES.forEach(s=>{
+    const b=document.createElement("button"); b.className="sample-btn";
+    b.innerHTML=`<span class="sample-tag tag-${s.tag}">${s.tag}</span>${s.label}`;
+    b.onclick=()=>{document.getElementById("queryInput").value=s.q;autoResize();document.getElementById("queryInput").focus();};
+    sl.appendChild(b);
+  });
+  const wc=document.getElementById("welcomeChips");
+  SAMPLES.slice(0,6).forEach(s=>{
+    const c=document.createElement("button");c.className="welcome-chip";c.textContent=s.label;
+    c.onclick=()=>{document.getElementById("queryInput").value=s.q;autoResize();document.getElementById("queryInput").focus();};
+    wc.appendChild(c);
+  });
+  const inp=document.getElementById("queryInput");
+  inp.addEventListener("input",autoResize);
+  inp.addEventListener("keydown",e=>{if((e.ctrlKey||e.metaKey)&&e.key==="Enter")handleSend();});
+  setForceRoute("auto");
+}
+
+function autoResize(){
+  const t=document.getElementById("queryInput");
+  t.style.height="auto";t.style.height=Math.min(t.scrollHeight,160)+"px";
+}
+
+function setForceRoute(val){
+  forceRoute=val;
+  document.querySelectorAll(".rt-btn").forEach(b=>{
+    b.className="rt-btn";
+    if(b.dataset.route===val) b.classList.add(`active-${val}`);
+  });
+}
+
+async function handleSend(){
+  const inp=document.getElementById("queryInput");
+  const q=inp.value.trim();
+  if(!q||loading) return;
+  const base=(document.getElementById("apiUrlInput").value||"http://localhost:8000").trim();
+  document.getElementById("welcome")?.remove();
+  addMsg({role:"user",content:q});
+  inp.value="";autoResize();
+  const tid=addThinking();setLoading(true);
+  const data=await callAPI(q,forceRoute,base);
+  removeThinking(tid);
+  addMsg({role:"ai",content:data.answer,table:data.table,sql:data.sql,
+    route:data.route_used,confidence:data.confidence,sources:data.sources,reason:data.routing_reason});
+  addHistory(q,data.route_used);highlightLegend(data.route_used);
+  setLoading(false);
+}
+
+function addMsg(m){
+  const cont=document.getElementById("messages");
+  const el=document.createElement("div");
+  const now=new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});
+  const route=m.route||"rag";
+  if(m.role==="user"){
+    el.className="msg msg-user";
+    el.innerHTML=`<div class="msg-avatar">you</div><div class="msg-body"><div class="msg-meta"><span class="msg-name">You</span><span class="msg-time">${now}</span></div><div class="msg-content">${esc(m.content)}</div></div>`;
+  }else{
+    const pipe=buildPipe(route);
+    let tableHtml="";
+    if(m.table){
+      const th=m.table.cols.map(c=>`<th>${esc(c)}</th>`).join("");
+      const tb=m.table.rows.map(row=>{
+        return`<tr>${row.map((c,ci)=>{const s=String(c);const isNum=s.startsWith("$")||/^\d[\d,.%]*$/.test(s);const isRank=ci===0&&/^\d+$/.test(s);return`<td class="${isRank?"rank-cell":isNum?"num-cell":""}">${esc(s)}</td>`}).join("")}</tr>`;
+      }).join("");
+      tableHtml=`<div class="data-table-wrap"><table class="data-table"><thead><tr>${th}</tr></thead><tbody>${tb}</tbody></table></div>`;
+    }
+    let sqlHtml=m.sql?`<div class="sql-block">${m.sql}</div>`:"";
+    const srcHtml=m.sources&&m.sources.length?`<div class="msg-sources"><span class="source-label">sources:</span>${m.sources.map(s=>`<span class="source-chip">${esc(s)}</span>`).join("")}</div>`:"";
+    const pct=m.confidence?Math.round(m.confidence*100):0;
+    const card=`<div class="route-card">
+      <div class="route-stat"><div class="route-stat-label">Route</div><div class="route-stat-val"><span class="msg-route-badge badge-${route}">${route.toUpperCase()}</span></div></div>
+      <div class="route-stat" style="flex:1"><div class="route-stat-label">Confidence</div><div class="confidence-bar"><div class="bar-track"><div class="bar-fill bar-fill-${route}" style="width:${pct}%"></div></div><div class="bar-pct">${pct}%</div></div></div>
+      <div class="route-stat" style="flex:2"><div class="route-stat-label">Router Reasoning</div><div class="route-stat-val" style="font-size:.72rem;color:var(--text2);white-space:normal;line-height:1.4">${esc(m.reason||"")}</div></div>
+    </div>`;
+    el.className=`msg route-${route}`;
+    el.innerHTML=`<div class="msg-avatar">AI</div><div class="msg-body"><div class="msg-meta"><span class="msg-name">HybridIQ</span><span class="msg-time">${now}</span><span class="msg-route-badge badge-${route}">${route}</span></div>${pipe}<div class="msg-content">${fmt(m.content)}${tableHtml}${sqlHtml}</div>${srcHtml}${card}</div>`;
+  }
+  cont.appendChild(el);cont.scrollTop=cont.scrollHeight;
+}
+
+function buildPipe(r){
+  const steps={sql:[["Query",""],["Router","sql"],["SQL Agent","sql"],["SQLite","sql"],["Answer",""]],rag:[["Query",""],["Router","rag"],["Embeddings","rag"],["ChromaDB","rag"],["Answer",""]],hybrid:[["Query",""],["Router","hybrid"],["SQL+RAG","hybrid"],["Synthesizer","hybrid"],["Answer",""]]};
+  const s=steps[r]||steps.rag;
+  const cm={sql:"var(--sql)",rag:"var(--rag)",hybrid:"var(--hybrid)","":"var(--text3)"};
+  const bg={sql:"var(--sql-dim)",rag:"var(--rag-dim)",hybrid:"var(--hybrid-dim)","":"var(--bg3)"};
+  const bd={sql:"var(--sql)",rag:"var(--rag)",hybrid:"var(--hybrid)","":"var(--border)"};
+  return`<div class="pipeline-vis">${s.map(([l,c],i)=>`<div class="pipe-step"><span class="pipe-node" style="color:${cm[c]};background:${bg[c]};border-color:${bd[c]}">${l}</span>${i<s.length-1?'<span class="pipe-arrow">&#x2192;</span>':""}</div>`).join("")}</div>`;
+}
+
+function fmt(t){
+  if(!t) return "";
+  if(/<[a-zA-Z]/.test(t)) return`<p>${t}</p>`;
+  return t.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+    .replace(/`([^`]+)`/g,"<code>$1</code>")
+    .replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>")
+    .replace(/\n\n/g,"</p><p>").replace(/\n/g,"<br>")
+    .replace(/^/,"<p>").replace(/$/,"</p>");
+}
+function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")}
+
+let thinkN=0;
+function addThinking(){
+  const id="t"+(++thinkN);
+  const c=document.getElementById("messages");
+  const el=document.createElement("div");el.id=id;el.className="msg";
+  el.innerHTML=`<div class="msg-avatar">AI</div><div class="msg-body"><div class="thinking"><div class="think-dots"><div class="think-dot"></div><div class="think-dot"></div><div class="think-dot"></div></div><span class="think-label">routing &amp; retrieving&hellip;</span></div></div>`;
+  c.appendChild(el);c.scrollTop=c.scrollHeight;return id;
+}
+function removeThinking(id){document.getElementById(id)?.remove()}
+
+function setLoading(v){
+  loading=v;
+  document.getElementById("sendBtn").disabled=v;
+  document.getElementById("queryInput").disabled=v;
+}
+
+function addHistory(q,r){
+  history.unshift({q,r});
+  if(history.length>12) history.pop();
+  const el=document.getElementById("historyList");
+  const icon={sql:"&#x2B21;",rag:"&#x25C8;",hybrid:"&#x2B1F;"};
+  el.innerHTML=history.map(h=>`<div class="history-item" onclick="document.getElementById('queryInput').value=${JSON.stringify(h.q)};autoResize()"><span class="history-icon" style="color:var(--${h.r})">${icon[h.r]||"○"}</span><span>${esc(h.q)}</span></div>`).join("");
+}
+
+function highlightLegend(r){
+  ["sql","rag","hybrid"].forEach(x=>document.getElementById("leg-"+x).className="legend-item"+(x===r?` active-${x}`:""));
+  setTimeout(()=>["sql","rag","hybrid"].forEach(x=>document.getElementById("leg-"+x).className="legend-item"),3500);
+}
+
+init();
+</script>
+</body>
+</html>
