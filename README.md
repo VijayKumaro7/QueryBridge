@@ -327,12 +327,6 @@ pytest tests/test_router.py -v --tb=short   # Router only
 
 ---
 
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/streaming-responses`)
-3. Commit with clear messages (`git commit -m "feat: add streaming support to RAG chain"`)
-4. Open a Pull Request
 
 ---
 
