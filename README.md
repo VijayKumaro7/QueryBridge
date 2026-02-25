@@ -345,6 +345,6 @@ MIT License — see [LICENSE](LICENSE) for details.
 ## 👤 Author
 
 **Vijay** — Data Analyst & ML Engineer  
-[GitHub](https://github.com/VijayKumaro7) · [LinkedIn](https://linkedin.com/in/yourprofile)
+[GitHub](https://github.com/VijayKumaro7) · [LinkedIn](https://www.linkedin.com/in/vijay-kumar070/)
 
 > *QueryBridge — bridging structured databases and unstructured knowledge with intelligent routing.*
